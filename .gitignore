@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Database & Runtime data
+data/ips.db
+data/inspection_images/
+data/defect_images/
+data/reports/
+data/ips.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Environment
+.env
+*.env.local

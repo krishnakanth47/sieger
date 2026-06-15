@@ -1,0 +1,43 @@
+# SIEGER — Cone Inspection System (IPS) — Python Requirements
+
+# Web Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.12
+
+# Database
+sqlalchemy==2.0.36
+aiosqlite==0.20.0
+
+# Security / Auth
+python-jose[cryptography]==3.3.0
+bcrypt==4.2.0
+pydantic==2.9.2
+pydantic-settings==2.6.1
+
+# Computer Vision
+opencv-python-headless==4.10.0.84
+numpy==2.1.3
+
+# Data Processing
+pandas==2.2.3
+openpyxl==3.1.5
+
+# Report Generation
+reportlab==4.2.5
+
+# Industrial Connectivity
+pymodbus==3.7.4
+
+# Scheduling (hourly cleanup)
+apscheduler==3.10.4
+
+# Desktop Wrapper
+pywebview==5.3.2
+
+# HTTP utilities
+httpx==0.27.2
+requests==2.32.3
+
+# Packaging
+pyinstaller==6.11.1
