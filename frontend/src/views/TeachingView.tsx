@@ -34,12 +34,23 @@ function FeatureToggle({ label, enabled, onChange, description }: {
 }
 
 // ─── ROI Canvas Editor ─────────────────────────────────────
-function ROIEditor({ roi, onChange }: {
+function ROIEditor({ roi, onChange, dots, onAddDot, onClearDots }: {
   roi: { x: number; y: number; width: number; height: number };
   onChange: (r: typeof roi) => void;
+  dots: {x: number, y: number}[];
+  onAddDot: (d: {x: number, y: number}) => void;
+  onClearDots: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragging = useRef<{ type: 'move' | 'resize'; startX: number; startY: number; startRoi: typeof roi } | null>(null);
+
+  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (dots.length >= 3) return;
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    onAddDot({ x, y });
+  };
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -101,8 +112,29 @@ function ROIEditor({ roi, onChange }: {
     ctx.fillStyle = '#22c55e';
     ctx.font = '10px JetBrains Mono, monospace';
     ctx.fillText(`ROI: ${Math.round(roi.width * 100)}%W × ${Math.round(roi.height * 100)}%H`, rx - 50, ry - rr - 12);
-    ctx.restore();
-  }, [roi]);
+    // Dots
+    dots.forEach((dot, i) => {
+      ctx.beginPath();
+      ctx.arc(dot.x * W, dot.y * H, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.font = 'bold 10px JetBrains Mono';
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillText(`P${i+1}`, dot.x * W + 8, dot.y * H - 8);
+      // Crosshair
+      ctx.beginPath();
+      ctx.moveTo(dot.x * W - 8, dot.y * H);
+      ctx.lineTo(dot.x * W + 8, dot.y * H);
+      ctx.moveTo(dot.x * W, dot.y * H - 8);
+      ctx.lineTo(dot.x * W, dot.y * H + 8);
+      ctx.strokeStyle = 'rgba(245,158,11,0.5)';
+      ctx.stroke();
+    });
+
+  }, [roi, dots]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -112,15 +144,24 @@ function ROIEditor({ roi, onChange }: {
         ref={canvasRef}
         width={480}
         height={360}
-        style={{ width: '100%', height: 'auto', cursor: 'crosshair' }}
+        onClick={handleClick}
+        style={{ width: '100%', height: 'auto', cursor: dots.length < 3 ? 'crosshair' : 'default' }}
       />
       <div style={{
         position: 'absolute', bottom: 8, left: 8,
         fontSize: 10, color: 'var(--color-text-muted)',
         background: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: '3px 6px',
+        display: 'flex', gap: 8, alignItems: 'center'
       }}>
-        <Move size={10} style={{ display: 'inline', marginRight: 4 }} />
-        Interactive ROI (drag to adjust)
+        <div>
+          <Move size={10} style={{ display: 'inline', marginRight: 4 }} />
+          Click to place sizing dots ({dots.length}/3)
+        </div>
+        {dots.length > 0 && (
+          <button className="btn btn-ghost" style={{ padding: '2px 6px', fontSize: 9, color: 'var(--color-fail)' }} onClick={onClearDots}>
+            Clear
+          </button>
+        )}
       </div>
     </div>
   );
@@ -179,6 +220,7 @@ export default function TeachingView() {
   const [settings, setSettings] = useState<ToleranceSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dots, setDots] = useState<{x: number, y: number}[]>([]);
 
   useEffect(() => {
     teachingApi.getTolerance().then(r => setSettings(r.data)).catch(() => { });
@@ -232,7 +274,7 @@ export default function TeachingView() {
             <FeatureToggle
               label="Extraction" enabled={settings.enable_extraction}
               onChange={v => update({ enable_extraction: v })}
-              description="Enable automated cone body extraction and segmentation"
+              description="Enable automated component body extraction and segmentation"
             />
             <FeatureToggle
               label="Tube Pattern" enabled={settings.enable_tube_pattern}
@@ -259,6 +301,9 @@ export default function TeachingView() {
             <ROIEditor
               roi={settings.roi}
               onChange={roi => update({ roi })}
+              dots={dots}
+              onAddDot={d => setDots(prev => [...prev, d])}
+              onClearDots={() => setDots([])}
             />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>

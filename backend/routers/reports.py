@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, require_module_read
 from backend.database.db import get_db
 from backend.database.models import ActivityLog, Report
 from backend.services.report_service import (
@@ -38,7 +38,7 @@ async def get_report_data(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=500),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("reports")),
 ):
     """Return paginated inspection report data with applied filters."""
     start = datetime.strptime(start_date, "%Y-%m-%d") if start_date else None
@@ -84,7 +84,7 @@ async def export_report_csv(
     material_id: Optional[int] = None,
     status: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("reports")),
 ):
     start = datetime.strptime(start_date, "%Y-%m-%d") if start_date else None
     end = datetime.strptime(end_date, "%Y-%m-%d") if end_date else None
@@ -119,7 +119,7 @@ async def export_report_pdf(
     material_id: Optional[int] = None,
     status: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("reports")),
 ):
     start = datetime.strptime(start_date, "%Y-%m-%d") if start_date else None
     end = datetime.strptime(end_date, "%Y-%m-%d") if end_date else None
@@ -148,7 +148,7 @@ async def export_report_pdf(
 @router.get("/history")
 async def get_report_history(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("reports")),
 ):
     """List previously generated reports."""
     reports = db.query(Report).order_by(Report.generated_at.desc()).limit(50).all()

@@ -21,7 +21,7 @@ from backend.core.security import (
     verify_password,
 )
 from backend.database.db import get_db
-from backend.database.models import ActivityLog, Permission, Role, User
+from backend.database.models import ActivityLog, Permission, Role, User, UserService
 
 router = APIRouter(prefix="/users", tags=["users"])
 logger = logging.getLogger(__name__)
@@ -66,9 +66,22 @@ async def login(
     token = create_access_token({"sub": str(user.id)})
     user.last_login = datetime.utcnow()
 
-    # Build permissions map
-    perms = {p.module: {"read": p.can_read, "write": p.can_write, "delete": p.can_delete}
-             for p in user.role.permissions}
+    # Build permissions map:
+    # Administrators always get the full role-based permission map.
+    # All other users get permissions derived solely from their assigned services.
+    if user.role.name == "Administrator":
+        perms = {
+            p.module: {"read": p.can_read, "write": p.can_write, "delete": p.can_delete}
+            for p in user.role.permissions
+        }
+    else:
+        user_service_modules = [
+            us.module for us in db.query(UserService).filter(UserService.user_id == user.id).all()
+        ]
+        perms = {
+            module: {"read": True, "write": True, "delete": False}
+            for module in user_service_modules
+        }
 
     db.add(ActivityLog(
         user_id=user.id, username=user.username, role_name=user.role.name,
@@ -111,10 +124,11 @@ class UserCreateRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     full_name: str = Field(min_length=1, max_length=100)
     email: Optional[str] = None
-    password: str = Field(min_length=6)
+    password: str = Field(min_length=8)
     role_id: int
     employee_id: Optional[str] = None
     department: Optional[str] = None
+    services: list[str] = []
 
 
 class UserUpdateRequest(BaseModel):
@@ -124,6 +138,7 @@ class UserUpdateRequest(BaseModel):
     is_active: Optional[bool] = None
     employee_id: Optional[str] = None
     department: Optional[str] = None
+    services: Optional[list[str]] = None
 
 
 @router.get("/")
@@ -139,6 +154,7 @@ async def list_users(
             "employee_id": u.employee_id, "department": u.department,
             "last_login": u.last_login.isoformat() if u.last_login else None,
             "created_at": u.created_at.isoformat() if u.created_at else None,
+            "services": [s.module for s in u.services],
         }
         for u in users
     ]
@@ -168,6 +184,12 @@ async def create_user(
         department=request.department,
     )
     db.add(user)
+    db.flush()  # Get user.id without full commit
+
+    # Assign services for the new user
+    for module in request.services:
+        db.add(UserService(user_id=user.id, module=module))
+
     db.commit()
     db.refresh(user)
 
@@ -175,7 +197,7 @@ async def create_user(
         user_id=current_user.id, username=current_user.username,
         role_name=current_user.role.name, action_type="CREATE",
         module="user_management",
-        description=f"Created user '{request.username}' with role '{role.name}'",
+        description=f"Created user '{request.username}' with role '{role.name}', services: {request.services}",
     ))
     db.commit()
     return {"id": user.id, "username": user.username, "role": role.name}
@@ -192,15 +214,26 @@ async def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    for field, value in request.model_dump(exclude_none=True).items():
+    # Update scalar fields (exclude 'services' — handled separately)
+    update_data = request.model_dump(exclude_none=True)
+    services = update_data.pop("services", None)
+    for field, value in update_data.items():
         setattr(user, field, value)
+
+    # Replace service assignments if provided
+    if services is not None:
+        db.query(UserService).filter(UserService.user_id == user_id).delete()
+        for module in services:
+            db.add(UserService(user_id=user_id, module=module))
+
     db.commit()
 
     db.add(ActivityLog(
         user_id=current_user.id, username=current_user.username,
         role_name=current_user.role.name, action_type="PARAMETER_CHANGE",
         module="user_management",
-        description=f"Updated user '{user.username}'",
+        description=f"Updated user '{user.username}'"
+        + (f", services: {services}" if services is not None else ""),
     ))
     db.commit()
     return {"status": "updated"}
@@ -239,8 +272,8 @@ async def reset_password(
     db: Session = Depends(get_db),
     current_user=Depends(require_admin),
 ):
-    if len(new_password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -254,7 +287,15 @@ async def reset_password(
 @router.get("/roles")
 async def list_roles(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     roles = db.query(Role).all()
-    return [{"id": r.id, "name": r.name, "description": r.description} for r in roles]
+    return [{
+        "id": r.id,
+        "name": r.name,
+        "description": r.description,
+        "permissions": {
+            p.module: {"read": p.can_read, "write": p.can_write, "delete": p.can_delete}
+            for p in r.permissions
+        }
+    } for r in roles]
 
 
 class PermissionUpdateRequest(BaseModel):

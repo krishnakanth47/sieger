@@ -7,38 +7,38 @@
 ═══════════════════════════════════════════════════════════ */
 
 @theme {
-  /* Core industrial palette */
-  --color-ips-bg: #0a0d0f;
-  --color-ips-surface: #111518;
-  --color-ips-surface-2: #161b20;
-  --color-ips-surface-3: #1c2228;
-  --color-ips-border: #252d35;
-  --color-ips-border-2: #2e3a45;
+  /* Core light palette */
+  --color-ips-bg: #ffffff;
+  --color-ips-surface: #f8fafc;
+  --color-ips-surface-2: #f1f5f9;
+  --color-ips-surface-3: #e2e8f0;
+  --color-ips-border: #cbd5e1;
+  --color-ips-border-2: #94a3b8;
 
   /* Sidebar */
-  --color-sidebar: #0d1a10;
-  --color-sidebar-hover: #152518;
-  --color-sidebar-active: #1a3020;
-  --color-sidebar-border: #1e3022;
+  --color-sidebar: #f8fafc;
+  --color-sidebar-hover: #f1f5f9;
+  --color-sidebar-active: #e2e8f0;
+  --color-sidebar-border: #cbd5e1;
 
   /* Brand green */
-  --color-brand: #22c55e;
-  --color-brand-dark: #16a34a;
-  --color-brand-light: #4ade80;
-  --color-brand-glow: rgba(34, 197, 94, 0.15);
+  --color-brand: #10b981;
+  --color-brand-dark: #059669;
+  --color-brand-light: #34d399;
+  --color-brand-glow: rgba(16, 185, 129, 0.15);
 
   /* Status colors */
-  --color-pass: #22c55e;
-  --color-fail: #ef4444;
-  --color-warn: #f59e0b;
+  --color-pass: #10b981; /* Emerald Green */
+  --color-fail: #e11d48; /* Crimson Red */
+  --color-warn: #f59e0b; /* Amber */
   --color-info: #3b82f6;
-  --color-uv: #a855f7;
+  --color-uv: #8b5cf6; /* Violet */
 
   /* Text */
-  --color-text-primary: #e8edf2;
-  --color-text-secondary: #8fa3b4;
-  --color-text-muted: #4a6070;
-  --color-text-accent: #22c55e;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+  --color-text-accent: #10b981;
 
   /* Fonts */
   --font-sans: 'Inter', 'Segoe UI', sans-serif;

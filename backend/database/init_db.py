@@ -23,6 +23,7 @@ from backend.database.models import (
     Shift,
     ToleranceSettings,
     User,
+    UserService,
 )
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,7 @@ def init_db() -> None:
         _seed_roles(db)
         _seed_permissions(db)
         _seed_admin_user(db)
+        _seed_admin_services(db)
         _seed_shifts(db)
         _seed_cameras(db)
         _seed_plc(db)
@@ -179,6 +181,24 @@ def _seed_admin_user(db: Session) -> None:
             )
         )
         logger.info("Default admin user created (username: admin, password: Admin@1234)")
+    db.flush()
+
+
+ALL_MODULES = [
+    "inspect", "data_capture", "teaching", "settings",
+    "analytics", "reports", "activity_log", "user_management",
+]
+
+
+def _seed_admin_services(db: Session) -> None:
+    """Ensure the admin user has all modules as service grants."""
+    admin = db.query(User).filter(User.username == "admin").first()
+    if not admin:
+        return
+    existing = {s.module for s in db.query(UserService).filter(UserService.user_id == admin.id).all()}
+    for module in ALL_MODULES:
+        if module not in existing:
+            db.add(UserService(user_id=admin.id, module=module))
     db.flush()
 
 

@@ -102,3 +102,22 @@ def require_role(*roles: str):
 require_admin = require_role("Administrator")
 require_manager_or_above = require_role("Administrator", "Manager")
 require_supervisor_or_above = require_role("Administrator", "Manager", "Supervisor")
+
+
+def require_module_read(module: str):
+    """FastAPI dependency factory — returns 403 if user cannot read the given module.
+    Administrator role always passes regardless of stored permissions."""
+    async def dependency(current_user=Depends(get_current_user)):
+        if current_user.role.name == "Administrator":
+            return current_user
+        has_read = any(
+            p.module == module and p.can_read
+            for p in current_user.role.permissions
+        )
+        if not has_read:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"You do not have permission to access the '{module}' module.",
+            )
+        return current_user
+    return dependency

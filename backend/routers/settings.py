@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from backend.core.security import get_current_user, require_manager_or_above
+from backend.core.security import get_current_user, require_manager_or_above, require_module_read
 from backend.core.state_machine import state_machine
 from backend.database.db import get_db
 from backend.database.models import (
@@ -70,7 +70,7 @@ async def update_camera(
     camera_name: str,
     request: CameraUpdateRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("settings")),
 ):
     _check_not_locked()
     cam = db.query(CameraConfiguration).filter(CameraConfiguration.camera_name == camera_name).first()
@@ -120,7 +120,7 @@ async def get_plc(db: Session = Depends(get_db), current_user=Depends(get_curren
 async def update_plc(
     request: PLCUpdateRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("settings")),
 ):
     _check_not_locked()
     plc = db.query(PLCConfiguration).first()
@@ -163,7 +163,7 @@ async def get_shifts(db: Session = Depends(get_db), current_user=Depends(get_cur
 async def create_shift(
     request: ShiftRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("settings")),
 ):
     _check_not_locked()
     current_count = db.query(Shift).count()
@@ -183,7 +183,7 @@ async def update_shift(
     shift_id: int,
     request: ShiftRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("settings")),
 ):
     _check_not_locked()
     shift = db.query(Shift).filter(Shift.id == shift_id).first()
@@ -199,7 +199,7 @@ async def update_shift(
 async def delete_shift(
     shift_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("settings")),
 ):
     _check_not_locked()
     shift = db.query(Shift).filter(Shift.id == shift_id).first()
@@ -236,7 +236,7 @@ async def get_illumination(db: Session = Depends(get_db), current_user=Depends(g
 async def update_illumination(
     request: IlluminationUpdateRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("settings")),
 ):
     state = db.query(IlluminationState).first()
     if not state:
@@ -282,7 +282,7 @@ async def update_setting(
     key: str,
     value: str,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("settings")),
 ):
     _check_not_locked()
     setting = db.query(Setting).filter(Setting.key == key).first()

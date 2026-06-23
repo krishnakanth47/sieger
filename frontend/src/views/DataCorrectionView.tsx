@@ -75,7 +75,7 @@ function CreatePatternModal({ onClose, onCreate }: { onClose: () => void; onCrea
 
   const handleCreate = async () => {
     if (!validate(name)) {
-      setError('Name must be lowercase alphanumeric with hyphens, 3–50 chars (e.g. dark-brown-cone)');
+      setError('Name must be lowercase alphanumeric with hyphens, 3–50 chars (e.g. dark-brown-item)');
       return;
     }
     setLoading(true);
@@ -97,12 +97,12 @@ function CreatePatternModal({ onClose, onCreate }: { onClose: () => void; onCrea
             <label className="input-label">Pattern Name *</label>
             <input
               className="input"
-              placeholder="dark-brown-cone"
+              placeholder="dark-brown-item"
               value={name}
               onChange={e => { setName(e.target.value.toLowerCase()); setError(''); }}
             />
             <p style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>
-              Lowercase, alphanumeric, hyphens allowed (e.g. dark-brown-cone)
+              Lowercase, alphanumeric, hyphens allowed (e.g. dark-brown-item)
             </p>
           </div>
           <div>
@@ -126,7 +126,7 @@ function CreatePatternModal({ onClose, onCreate }: { onClose: () => void; onCrea
   );
 }
 
-export default function DataCaptureView() {
+export default function DataCorrectionView() {
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [capturing, setCapturing] = useState(false);
@@ -134,6 +134,7 @@ export default function DataCaptureView() {
   const [renameId, setRenameId] = useState<number | null>(null);
   const [renameName, setRenameName] = useState('');
   const [captureResult, setCaptureResult] = useState<any>(null);
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
 
   const loadPatterns = async () => {
     try {
@@ -143,6 +144,13 @@ export default function DataCaptureView() {
   };
 
   useEffect(() => { loadPatterns(); }, []);
+
+  const getFolder = (name: string) => {
+    if (name.includes('brown')) return 'Brown';
+    if (name.includes('green')) return 'Green';
+    if (name.includes('test')) return 'Testing';
+    return 'Other';
+  };
 
   const selected = patterns.find(p => p.id === selectedId);
 
@@ -174,9 +182,9 @@ export default function DataCaptureView() {
   return (
     <div className="page">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>Data Capture</h1>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>Data Correction</h1>
           <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
             Collect baseline reference images for pattern training
           </p>
@@ -189,23 +197,28 @@ export default function DataCaptureView() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1rem', flex: 1, minHeight: 0 }}>
         {/* Pattern Grid */}
         <div>
-          <p className="section-title">Patterns</p>
+          <p className="section-title">Pattern Library</p>
           {patterns.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
               <Camera size={32} style={{ margin: '0 auto 12px' }} />
               <p style={{ fontSize: 13 }}>No patterns yet. Create one to begin.</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-              {patterns.map(p => (
-                <PatternCard
-                  key={p.id} pattern={p}
-                  selected={selectedId === p.id}
-                  onSelect={() => setSelectedId(p.id)}
-                  onDelete={() => handleDelete(p.id)}
-                  onRename={() => { setRenameId(p.id); setRenameName(p.name); }}
-                  onClear={() => handleClear(p.id)}
-                />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+              {Array.from(new Set(patterns.map(p => getFolder(p.name)))).map(folder => (
+                <div key={folder} className="card cursor-pointer hover:border-[var(--color-ips-border-2)]" style={{ transition: 'all 0.2s' }} onClick={() => setActiveFolder(folder)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ padding: 10, background: 'var(--color-ips-surface-2)', borderRadius: 8 }}>
+                      <Camera size={24} className="text-[var(--color-brand)]" />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{folder}</p>
+                      <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                        {patterns.filter(p => getFolder(p.name) === folder).length} patterns
+                      </p>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -275,6 +288,16 @@ export default function DataCaptureView() {
                 >
                   {capturing ? <><StopCircle size={14} /> Capturing…</> : <><PlayCircle size={14} /> Capture Image</>}
                 </button>
+
+                {/* Deploy Button */}
+                <button
+                  className="btn btn-outline"
+                  disabled={!selected.ready}
+                  style={{ width: '100%', justifyContent: 'center', marginTop: 4, borderColor: selected.ready ? 'var(--color-brand)' : 'var(--color-ips-border-2)', color: selected.ready ? 'var(--color-brand)' : 'var(--color-text-muted)' }}
+                  onClick={() => alert('Pattern deployed successfully for inspection.')}
+                >
+                  Deploy Pattern
+                </button>
               </div>
             )}
           </div>
@@ -314,6 +337,29 @@ export default function DataCaptureView() {
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="btn btn-outline" onClick={() => setRenameId(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleRename}>Rename</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Folder Modal */}
+      {activeFolder && (
+        <div className="modal-overlay" onClick={() => setActiveFolder(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 700 }}>
+            <div className="modal__title"><Camera size={16} /> {activeFolder}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+              {patterns.filter(p => getFolder(p.name) === activeFolder).map(p => (
+                <PatternCard
+                  key={p.id} pattern={p}
+                  selected={selectedId === p.id}
+                  onSelect={() => { setSelectedId(p.id); setActiveFolder(null); }}
+                  onDelete={() => handleDelete(p.id)}
+                  onRename={() => { setRenameId(p.id); setRenameName(p.name); setActiveFolder(null); }}
+                  onClear={() => handleClear(p.id)}
+                />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button className="btn btn-outline" onClick={() => setActiveFolder(null)}>Close</button>
             </div>
           </div>
         </div>

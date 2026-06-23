@@ -25,7 +25,29 @@ export default function LoginView() {
       const data: AuthToken = res.data;
       localStorage.setItem('ips_token', data.access_token);
       setAuth(data);
-      navigate('/inspect');
+
+      // Navigate to the first accessible module, or /inspect as fallback
+      const MODULE_PATHS: Record<string, string> = {
+        inspect: '/inspect',
+        analytics: '/analytics',
+        data_capture: '/data-correction',
+        teaching: '/teaching',
+        settings: '/settings',
+        reports: '/reports',
+        activity_log: '/activity-log',
+        user_management: '/users',
+      };
+      const MODULE_ORDER = [
+        'inspect', 'data_capture', 'teaching', 'settings',
+        'analytics', 'reports', 'activity_log', 'user_management',
+      ];
+
+      if (data.role === 'Administrator') {
+        navigate('/inspect');
+      } else {
+        const firstModule = MODULE_ORDER.find(m => data.permissions?.[m]?.read);
+        navigate(firstModule ? MODULE_PATHS[firstModule] : '/inspect');
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid credentials. Please try again.');
     } finally { setLoading(false); }
@@ -78,7 +100,7 @@ export default function LoginView() {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img src="/logo.png" alt="SIEGER" style={{ width: '200px', height: 'auto', margin: '0 auto 1rem' }} />
           <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-            Cone Inspection System
+            Inspection System
           </p>
         </div>
 

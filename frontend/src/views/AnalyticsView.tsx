@@ -29,7 +29,7 @@ export default function AnalyticsView() {
     analyticsApi.summary().then(r => setSummary(r.data)).catch(() => { });
     analyticsApi.hourly().then(r => setHourly(r.data)).catch(() => { });
     analyticsApi.shifts().then(r => setShifts(r.data)).catch(() => { });
-    analyticsApi.defectTrends(7).then(r => setTrends(r.data)).catch(() => { });
+    analyticsApi.defectTrends(3).then(r => setTrends(r.data)).catch(() => { });
     analyticsApi.kpiCards().then(r => setKpis(r.data)).catch(() => { });
   }, []);
 
@@ -42,7 +42,15 @@ export default function AnalyticsView() {
 
   return (
     <div className="page">
-      <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>Production Analytics</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>Production Analytics</h1>
+        <select className="input" style={{ width: 'auto', padding: '0.25rem 0.5rem', height: 'auto', fontSize: '0.75rem' }}>
+          <option>Today</option>
+          <option>Last 3 Days</option>
+          <option>Last 7 Days</option>
+          <option>This Month</option>
+        </select>
+      </div>
 
       {/* KPI strip */}
       {kpis && (
@@ -51,7 +59,7 @@ export default function AnalyticsView() {
           <KPICard label="Total Passed" value={kpis.total_passed} color={COLORS.pass} />
           <KPICard label="Total Failed" value={kpis.total_failed} color={COLORS.fail} />
           <KPICard label="Pass Rate" value={`${kpis.pass_rate}%`} color={COLORS.pass} />
-          <KPICard label="Avg / Hour" value={kpis.avg_hourly} sub="cones/hr" />
+          <KPICard label="Avg / Hour" value={kpis.avg_hourly} sub="items/hr" />
           <KPICard label="Uptime" value={`${kpis.uptime_pct}%`} color={COLORS.pass} />
         </div>
       )}
@@ -135,7 +143,7 @@ export default function AnalyticsView() {
 
         {/* Defect Trend */}
         <div className="card">
-          <p className="card-header">Defect Trend (7 Days)</p>
+          <p className="card-header">Defect Trend (3 Days)</p>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={trends} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />

@@ -4,8 +4,11 @@ Complete SQLAlchemy ORM schema for all 15 tables.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 from sqlalchemy import (
     Boolean,
@@ -58,13 +61,26 @@ class User(Base):
     hashed_password = Column(String(200), nullable=False)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     last_login = Column(DateTime, nullable=True)
     employee_id = Column(String(50), nullable=True)
     department = Column(String(100), nullable=True)
 
     role = relationship("Role", back_populates="users")
     activity_logs = relationship("ActivityLog", back_populates="user")
+    services = relationship("UserService", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserService(Base):
+    """Per-user service grants — independent of role-based permissions."""
+    __tablename__ = "user_services"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    module = Column(String(50), nullable=False)  # inspect, data_capture, teaching, etc.
+
+    user = relationship("User", back_populates="services")
+    __table_args__ = (UniqueConstraint("user_id", "module", name="uq_user_module"),)
 
 
 class Machine(Base):
@@ -89,7 +105,7 @@ class Material(Base):
     description = Column(Text, nullable=True)
     color = Column(String(50), nullable=True)
     grade = Column(String(50), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     inspection_results = relationship("InspectionResult", back_populates="material")
 
@@ -101,8 +117,8 @@ class Pattern(Base):
     name = Column(String(100), unique=True, nullable=False)
     description = Column(Text, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, onupdate=utc_now)
     image_count = Column(Integer, default=0)
     status = Column(String(20), default="staged")  # staged, active, archived
     thumbnail_path = Column(String(300), nullable=True)
@@ -117,7 +133,7 @@ class CapturedImage(Base):
     pattern_id = Column(Integer, ForeignKey("patterns.id", ondelete="CASCADE"), nullable=False)
     file_path = Column(String(500), nullable=False)
     file_size_kb = Column(Float, nullable=True)
-    captured_at = Column(DateTime, default=datetime.utcnow)
+    captured_at = Column(DateTime, default=utc_now)
     is_staged = Column(Boolean, default=True)
     camera_source = Column(String(50), default="visible")  # visible, uv, yarn_tail
 
@@ -144,7 +160,7 @@ class InspectionResult(Base):
     material_id = Column(Integer, ForeignKey("materials.id"), nullable=True)
     shift_id = Column(Integer, ForeignKey("shifts.id"), nullable=True)
     basket_id = Column(String(50), nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=utc_now, index=True)
     status = Column(String(10), nullable=False)  # PASS, FAIL
     cone_diameter_mm = Column(Float, nullable=True)
     tube_diameter_mm = Column(Float, nullable=True)
@@ -172,7 +188,7 @@ class Defect(Base):
     bounding_box = Column(String(200), nullable=True)  # JSON: [x,y,w,h]
     image_path = Column(String(500), nullable=True)
     severity = Column(String(20), default="medium")   # low, medium, high, critical
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     inspection = relationship("InspectionResult", back_populates="defects")
 
@@ -181,7 +197,7 @@ class ActivityLog(Base):
     __tablename__ = "activity_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=utc_now, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     username = Column(String(50), nullable=True)  # Denormalized for log integrity
     role_name = Column(String(50), nullable=True)
@@ -200,7 +216,7 @@ class Report(Base):
     id = Column(Integer, primary_key=True, index=True)
     report_type = Column(String(50), nullable=False)  # inspection, defect, production, shift, operator
     generated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    generated_at = Column(DateTime, default=datetime.utcnow)
+    generated_at = Column(DateTime, default=utc_now)
     filter_params = Column(Text, nullable=True)  # JSON
     file_path = Column(String(500), nullable=True)
     file_format = Column(String(10), nullable=True)  # csv, pdf, xlsx
@@ -215,7 +231,7 @@ class Setting(Base):
     value = Column(Text, nullable=True)
     description = Column(String(300), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
 
 class CameraConfiguration(Base):
@@ -263,7 +279,7 @@ class ToleranceSettings(Base):
     roi_y = Column(Float, default=0.1)
     roi_width = Column(Float, default=0.8)
     roi_height = Column(Float, default=0.8)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
 
 class IlluminationState(Base):
@@ -274,4 +290,4 @@ class IlluminationState(Base):
     visible_light = Column(Boolean, default=False)
     uv_light = Column(Boolean, default=False)
     yarn_tail_light = Column(Boolean, default=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)

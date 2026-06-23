@@ -165,6 +165,8 @@ export default function InspectView() {
   useInspectionWebSocket();
 
   const isRunning = systemState === 'INSPECTION_RUNNING';
+  const hasFrames = !!(frames.visible || frames.uv || frames.yarn_tail);
+  const showAlarm = isRunning && !hasFrames;
 
   const handleStart = async () => {
     setLoading(true);
@@ -189,8 +191,8 @@ export default function InspectView() {
         }}
       >
         <KPICard label="Total Processed" value={kpi.total} icon={<Layers size={14} />} />
-        <KPICard label="Accepted" value={kpi.accepted} icon={<CheckCircle2 size={14} />} variant="pass" sub="cones passed" />
-        <KPICard label="Defective" value={kpi.defective} icon={<XCircle size={14} />} variant="fail" sub="cones rejected" />
+        <KPICard label="Accepted" value={kpi.accepted} icon={<CheckCircle2 size={14} />} variant="pass" sub="items passed" />
+        <KPICard label="Defective" value={kpi.defective} icon={<XCircle size={14} />} variant="fail" sub="items rejected" />
         <KPICard label="Pattern Fail" value={kpi.tube_pattern_status} icon={<AlertCircle size={14} />} variant="warn" />
         <KPICard label="Diameter Fail" value={kpi.cone_diameter_status} icon={<Ruler size={14} />} variant="warn" />
         <KPICard label="Tube Fail" value={kpi.tube_diameter_status} icon={<Circle size={14} />} variant="warn" />
@@ -199,27 +201,39 @@ export default function InspectView() {
         <KPICard label="Thread Mix" value={kpi.thread_mix_faults} icon={<Shuffle size={14} />} variant="fail" />
       </div>
 
+      {showAlarm && (
+        <div className="alert-banner mb-3" style={{ background: 'rgba(239,68,68,0.1)', borderColor: '#ef4444', color: '#ef4444', animation: 'pulse-dot 1.5s infinite', fontWeight: 'bold' }}>
+          ⚠️ MACHINE ON — NO COMPONENT DETECTED
+        </div>
+      )}
+
       {/* ── Main Grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 200px', gap: '0.75rem', flex: 1, minHeight: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(0, 1fr)) 200px', gap: '0.75rem', flex: 1, minHeight: 0 }}>
         {/* Camera feeds */}
-        <CameraBox
-          label="Visible Camera"
-          color="#22c55e"
-          src={frames.visible}
-          status={lastFrameStatus}
-        />
-        <CameraBox
-          label="UV Camera"
-          color="#a855f7"
-          src={frames.uv}
-          status={lastDefects.some(d => d.camera === 'uv') ? 'FAIL' : lastFrameStatus}
-        />
-        <CameraBox
-          label="Yarn Tail Camera"
-          color="#3b82f6"
-          src={frames.yarn_tail}
-          status={lastDefects.some(d => d.type === 'yarn_tail_missing') ? 'FAIL' : lastFrameStatus}
-        />
+        {(!isRunning || frames.visible) && (
+          <CameraBox
+            label="Visible Camera"
+            color="#10b981"
+            src={frames.visible}
+            status={lastFrameStatus}
+          />
+        )}
+        {(!isRunning || frames.uv) && (
+          <CameraBox
+            label="UV Camera"
+            color="#8b5cf6"
+            src={frames.uv}
+            status={lastDefects.some(d => d.camera === 'uv') ? 'FAIL' : lastFrameStatus}
+          />
+        )}
+        {(!isRunning || frames.yarn_tail) && (
+          <CameraBox
+            label="Yarn Tail Camera"
+            color="#3b82f6"
+            src={frames.yarn_tail}
+            status={lastDefects.some(d => d.type === 'yarn_tail_missing') ? 'FAIL' : lastFrameStatus}
+          />
+        )}
 
         {/* Ring chart + controls */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

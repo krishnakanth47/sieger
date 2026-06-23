@@ -13,7 +13,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, require_module_read
 from backend.core.state_machine import SystemState, state_machine
 from backend.database.db import get_db
 from backend.database.models import ActivityLog
@@ -85,7 +85,7 @@ async def websocket_inspect(websocket: WebSocket):
 @router.post("/start")
 async def start_inspection(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("inspect")),
 ):
     if state_machine.state == SystemState.INSPECTION_RUNNING:
         raise HTTPException(status_code=409, detail="Inspection already running.")
@@ -113,7 +113,7 @@ async def start_inspection(
 @router.post("/stop")
 async def stop_inspection(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("inspect")),
 ):
     if state_machine.state != SystemState.INSPECTION_RUNNING:
         raise HTTPException(status_code=409, detail="Inspection not running.")
@@ -133,13 +133,13 @@ async def stop_inspection(
 
 
 @router.post("/pause")
-async def pause_inspection(current_user=Depends(get_current_user)):
+async def pause_inspection(current_user=Depends(require_module_read("inspect"))):
     await inspection_service.pause()
     return {"status": "paused"}
 
 
 @router.post("/resume")
-async def resume_inspection(current_user=Depends(get_current_user)):
+async def resume_inspection(current_user=Depends(require_module_read("inspect"))):
     await inspection_service.resume()
     return {"status": "resumed"}
 
@@ -147,7 +147,7 @@ async def resume_inspection(current_user=Depends(get_current_user)):
 @router.post("/reset")
 async def reset_counters(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("inspect")),
 ):
     inspection_service.reset_counters()
     db.add(ActivityLog(

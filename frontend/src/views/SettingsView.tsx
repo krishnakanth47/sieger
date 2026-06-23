@@ -2,7 +2,7 @@ import React, { ReactNode, useState, useEffect } from 'react';
 import {
   Wifi, WifiOff, Plus, Trash2, Save,
   Camera, Cpu, Clock, Zap, ZapOff,
-  AlertTriangle,
+  AlertTriangle, Settings, Mail
 } from 'lucide-react';
 import { settingsApi } from '../api/client';
 import type { CameraConfig, PLCConfig, Shift, IlluminationState } from '../types';
@@ -217,7 +217,7 @@ function ShiftSetup() {
       </div>
       <button
         className="btn btn-outline"
-        style={{ fontSize: 11, padding: '5px 12px' }}
+        style={{ fontSize: 11, padding: '5px 12px', opacity: shifts.length >= MAX ? 0.5 : 1, cursor: shifts.length >= MAX ? 'not-allowed' : 'pointer' }}
         onClick={addShift}
         disabled={shifts.length >= MAX}
       >
@@ -276,32 +276,38 @@ function IlluminationPanel() {
       </div>
 
       {/* Individual lights */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-        {lights.map(({ key, label, color }) => {
-          const on = state[key] && state.master_enabled;
+      {/* Individual light toggles */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+        {lights.map(({ key, label }) => {
+          const on = state[key];
           return (
-            <div
-              key={key}
-              style={{
-                padding: '12px',
-                borderRadius: 6,
-                border: `1px solid ${on ? color + '55' : 'var(--color-ips-border)'}`,
-                background: on ? color + '15' : 'var(--color-ips-surface-2)',
-                cursor: state.master_enabled ? 'pointer' : 'not-allowed',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                opacity: state.master_enabled ? 1 : 0.5,
-              }}
-              onClick={() => state.master_enabled && toggle(key)}
-            >
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: on ? color : 'var(--color-ips-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: on ? `0 0 12px ${color}88` : 'none', transition: 'all 0.3s' }}>
-                <Zap size={14} style={{ color: on ? '#fff' : 'var(--color-text-muted)' }} />
-              </div>
-              <span style={{ fontSize: 10, fontWeight: 600, color: on ? color : 'var(--color-text-muted)', textAlign: 'center' }}>{label}</span>
-              <span className={`badge ${on ? 'badge-pass' : 'badge-idle'}`} style={{ fontSize: 8 }}>{on ? 'ON' : 'OFF'}</span>
+            <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--color-ips-surface-2)', borderRadius: 6, border: '1px solid var(--color-ips-border)' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)', opacity: state.master_enabled ? 1 : 0.5 }}>{label}</span>
+              <label className="toggle" style={{ pointerEvents: state.master_enabled ? 'auto' : 'none', opacity: state.master_enabled ? 1 : 0.5 }}>
+                <input type="checkbox" checked={on} onChange={() => state.master_enabled && toggle(key)} disabled={!state.master_enabled} />
+                <div className="toggle__track"><div className="toggle__thumb" /></div>
+              </label>
             </div>
           );
         })}
       </div>
+    </SectionCard>
+  );
+}
+
+// ─── Stub Panels ───────────────────────────────────────────
+function ConfigurePanel() {
+  return (
+    <SectionCard title="Configure" icon={<Settings size={16} />}>
+      <p style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: '1rem' }}>Global configuration options will appear here.</p>
+    </SectionCard>
+  );
+}
+
+function EmailSettingPanel() {
+  return (
+    <SectionCard title="Email Setting" icon={<Mail size={16} />}>
+      <p style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: '1rem' }}>Alert email routing configuration will appear here.</p>
     </SectionCard>
   );
 }
@@ -311,11 +317,13 @@ export default function SettingsView() {
   return (
     <div className="page">
       <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>System Settings</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' }}>
         <CameraSetup />
         <PLCSetup />
         <ShiftSetup />
         <IlluminationPanel />
+        <ConfigurePanel />
+        <EmailSettingPanel />
       </div>
     </div>
   );

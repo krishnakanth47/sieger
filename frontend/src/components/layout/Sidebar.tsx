@@ -20,26 +20,28 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   path: string;
+  /** permission module key to check (defaults to id) */
+  permModule?: string;
   alwaysAccessible?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'inspect', label: 'Inspect', icon: <Eye size={16} />, path: '/inspect' },
-  { id: 'analytics', label: 'Analytics', icon: <BarChart2 size={16} />, path: '/analytics', alwaysAccessible: true },
-  { id: 'data_capture', label: 'Data Capture', icon: <Camera size={16} />, path: '/data-capture' },
-  { id: 'teaching', label: 'Teaching', icon: <BookOpen size={16} />, path: '/teaching' },
-  { id: 'settings', label: 'Settings', icon: <Settings size={16} />, path: '/settings' },
-  { id: 'reports', label: 'Reports', icon: <FileText size={16} />, path: '/reports', alwaysAccessible: true },
-  { id: 'activity_log', label: 'Activity Log', icon: <ClipboardList size={16} />, path: '/activity-log', alwaysAccessible: true },
-  { id: 'user_management', label: 'Manage Users', icon: <Users size={16} />, path: '/users' },
+  { id: 'inspect',      label: 'Inspect',         icon: <Eye size={16} />,         path: '/inspect',       permModule: 'inspect' },
+  { id: 'analytics',   label: 'Analytics',        icon: <BarChart2 size={16} />,   path: '/analytics',     permModule: 'analytics' },
+  { id: 'data_capture',label: 'Data Correction',  icon: <Camera size={16} />,      path: '/data-correction',permModule: 'data_capture' },
+  { id: 'teaching',    label: 'Teaching',         icon: <BookOpen size={16} />,    path: '/teaching',      permModule: 'teaching' },
+  { id: 'settings',    label: 'Settings',         icon: <Settings size={16} />,    path: '/settings',      permModule: 'settings' },
+  { id: 'reports',     label: 'Reports',          icon: <FileText size={16} />,    path: '/reports',       permModule: 'reports' },
+  { id: 'activity_log',label: 'Activity log',     icon: <ClipboardList size={16} />,path: '/activity-log', permModule: 'activity_log' },
+  { id: 'users',       label: 'Manage user',      icon: <Users size={16} />,       path: '/users',         permModule: 'user_management' },
 ];
 
 export function Sidebar() {
   const navigate = useNavigate();
-  const { activeView, setActiveView, isModuleLocked, showAlert, setAuth, auth } = useAppStore();
+  const { activeView, setActiveView, isModuleLocked, showAlert, setAuth, auth, hasPermission } = useAppStore();
 
   const handleNav = (item: NavItem) => {
-    if (!item.alwaysAccessible && isModuleLocked(item.id)) {
+    if (!item.adminOnly && !item.alwaysAccessible && isModuleLocked(item.id)) {
       showAlert(
         'Access Denied: Halt live inspection line operations before altering core system configurations.'
       );
@@ -72,6 +74,11 @@ export function Sidebar() {
           Navigation
         </p>
         {NAV_ITEMS.map((item) => {
+          const isAdmin = auth?.role === 'Administrator';
+
+          // For non-admins: hide items they lack read permission for
+          if (!isAdmin && item.permModule && !hasPermission(item.permModule, 'read')) return null;
+
           const locked = !item.alwaysAccessible && isModuleLocked(item.id);
           const active = activeView === item.id;
           return (

@@ -42,22 +42,14 @@ export function Header() {
         </div>
         <div className="w-px h-8 bg-[var(--color-ips-border)]" />
         <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider hidden sm:block">
-          Cone Inspection System
+          Inspection System
         </p>
       </div>
 
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Real-time metrics strip */}
-      <div className="hidden lg:flex items-center gap-4 text-[10px]">
-        <MetricChip label="Total" value={kpi.total.toLocaleString()} />
-        <MetricChip label="Accepted" value={kpi.accepted.toLocaleString()} color="text-[var(--color-pass)]" />
-        <MetricChip label="Defective" value={kpi.defective.toLocaleString()} color="text-[var(--color-fail)]" />
-        <MetricChip label="Efficiency" value={`${kpi.efficiency_pct}%`} color="text-[var(--color-brand)]" />
-      </div>
 
-      <div className="w-px h-6 bg-[var(--color-ips-border)] mx-1" />
 
       {/* PLC Status */}
       <div className="flex items-center gap-1.5 text-[10px]">
@@ -77,11 +69,11 @@ export function Header() {
       </span>
 
       {/* Clock */}
-      <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)]">
-        <Clock size={11} />
+      <div className="flex items-center gap-2 text-[var(--color-text-muted)] bg-[var(--color-ips-surface-2)] px-3 py-1.5 rounded-lg border border-[var(--color-ips-border)]">
+        <Clock size={18} />
         <div className="hidden md:block text-right">
-          <p className="font-mono font-semibold text-[var(--color-text-secondary)]">{fmt}</p>
-          <p className="text-[8px]">{date}</p>
+          <p className="font-mono font-bold text-[18px] leading-tight text-[var(--color-text-primary)]">{fmt}</p>
+          <p className="text-[11px] font-semibold tracking-wide uppercase">{date}</p>
         </div>
       </div>
 

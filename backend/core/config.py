@@ -50,8 +50,8 @@ class Settings(BaseSettings):
     PLC_DEFAULT_HOST: str = "192.168.1.100"
     PLC_DEFAULT_PORT: int = 502
 
-    # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"]
+    # CORS — PyWebView uses "null" origin (file-loaded local pages)
+    CORS_ORIGINS: list[str] = []
 
     def ensure_dirs(self) -> None:
         """Create all required runtime directories."""

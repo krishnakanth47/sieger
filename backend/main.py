@@ -1,6 +1,6 @@
 """
 IPS FastAPI Application Entry Point
-Manages app lifecycle, background tasks, CORS, and PyWebView launch.
+Manages app lifecycle, background tasks, and PyWebView desktop launch.
 """
 from __future__ import annotations
 
@@ -95,10 +95,10 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-# CORS
+# CORS — only "null" origin needed for PyWebView
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS + ["null"],  # null for PyWebView local files
+    allow_origins=["null"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -185,13 +185,7 @@ if _frontend_dist.exists():
     app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
     logger.info("Serving frontend from: %s", _frontend_dist)
 else:
-    @app.get("/", tags=["system"])
-    async def root():
-        return {
-            "message": "IPS API running. Frontend not built yet.",
-            "docs": "/api/docs",
-            "frontend_dist": str(_frontend_dist),
-        }
+    logger.warning("Frontend dist not found at: %s — run 'npm run build' in the frontend directory.", _frontend_dist)
 
 
 # ─── Entry point ────────────────────────────────────────────────────────────
@@ -211,7 +205,8 @@ def launch_pywebview():
         )
         webview.start(debug=settings.DEBUG)
     except ImportError:
-        logger.warning("PyWebView not installed. Open http://%s:%d in your browser.", settings.HOST, settings.PORT)
+        logger.error("PyWebView is not installed. Install it with: pip install pywebview")
+        sys.exit(1)
 
 
 def start_server():

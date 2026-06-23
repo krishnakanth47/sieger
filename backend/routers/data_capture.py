@@ -14,7 +14,7 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, require_module_read
 from backend.core.state_machine import SystemState, state_machine
 from backend.database.db import get_db
 from backend.database.models import ActivityLog, CapturedImage, Pattern
@@ -66,7 +66,7 @@ def _check_not_locked():
 async def capture_image(
     pattern_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("data_capture")),
 ):
     """Simulate capturing one frame and saving it to the staging directory."""
     _check_not_locked()
@@ -78,10 +78,10 @@ async def capture_image(
     if state_machine.state == SystemState.IDLE:
         await state_machine.transition(SystemState.DATA_CAPTURING)
 
-    pattern_dir = settings.CAPTURE_STAGING_DIR / pattern.name
+    pattern_dir = settings.CAPTURE_STAGING_DIR / str(pattern.name)
     pattern_dir.mkdir(parents=True, exist_ok=True)
-    image_idx = pattern.image_count + 1
-    filename = f"{pattern.name}_{image_idx:04d}.jpg"
+    image_idx = int(pattern.image_count) + 1
+    filename = f"{str(pattern.name)}_{image_idx:04d}.jpg"
     filepath = pattern_dir / filename
 
     # Mock: write a placeholder file (in production: save real frame)
@@ -93,14 +93,14 @@ async def capture_image(
         file_size_kb=round(filepath.stat().st_size / 1024, 2),
     )
     db.add(captured)
-    pattern.image_count = image_idx
+    pattern.image_count = image_idx  # type: ignore
     db.commit()
 
     db.add(ActivityLog(
         user_id=current_user.id, username=current_user.username,
         role_name=current_user.role.name, action_type="CAPTURE_IMAGE",
         module="data_capture",
-        description=f"Captured image {image_idx} for pattern '{pattern.name}'",
+        description=f"Captured image {image_idx} for pattern '{str(pattern.name)}'",
     ))
     db.commit()
 
@@ -116,7 +116,7 @@ async def capture_image(
 async def create_pattern(
     request: PatternCreateRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("data_capture")),
 ):
     _check_not_locked()
     existing = db.query(Pattern).filter(Pattern.name == request.name).first()
@@ -159,7 +159,7 @@ async def rename_pattern(
     pattern_id: int,
     request: PatternRenameRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("data_capture")),
 ):
     _check_not_locked()
     pattern = db.query(Pattern).filter(Pattern.id == pattern_id).first()
@@ -170,13 +170,13 @@ async def rename_pattern(
     if conflict:
         raise HTTPException(status_code=409, detail="Pattern name already in use")
 
-    old_name = pattern.name
+    old_name = str(pattern.name)
     old_dir = settings.CAPTURE_STAGING_DIR / old_name
     new_dir = settings.CAPTURE_STAGING_DIR / request.new_name
     if old_dir.exists():
         old_dir.rename(new_dir)
 
-    pattern.name = request.new_name
+    pattern.name = request.new_name  # type: ignore
     db.commit()
 
     db.add(ActivityLog(
@@ -193,14 +193,14 @@ async def rename_pattern(
 async def delete_pattern(
     pattern_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("data_capture")),
 ):
     _check_not_locked()
     pattern = db.query(Pattern).filter(Pattern.id == pattern_id).first()
     if not pattern:
         raise HTTPException(status_code=404, detail="Pattern not found")
 
-    pattern_dir = settings.CAPTURE_STAGING_DIR / pattern.name
+    pattern_dir = settings.CAPTURE_STAGING_DIR / str(pattern.name)
     if pattern_dir.exists():
         shutil.rmtree(pattern_dir)
 
@@ -210,7 +210,7 @@ async def delete_pattern(
     db.add(ActivityLog(
         user_id=current_user.id, username=current_user.username,
         role_name=current_user.role.name, action_type="DELETE_PATTERN",
-        module="data_capture", description=f"Deleted pattern '{pattern.name}' and all images",
+        module="data_capture", description=f"Deleted pattern '{str(pattern.name)}' and all images",
     ))
     db.commit()
     return {"status": "deleted"}
@@ -220,7 +220,7 @@ async def delete_pattern(
 async def clear_staging(
     pattern_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("data_capture")),
 ):
     """Clear captured images from DB and return raw files to staging."""
     _check_not_locked()
@@ -229,9 +229,9 @@ async def clear_staging(
         raise HTTPException(status_code=404, detail="Pattern not found")
 
     db.query(CapturedImage).filter(CapturedImage.pattern_id == pattern_id).delete()
-    pattern.image_count = 0
+    pattern.image_count = 0  # type: ignore
     db.commit()
-    return {"status": "cleared", "pattern": pattern.name}
+    return {"status": "cleared", "pattern": str(pattern.name)}
 
 
 @router.get("/staging-stats")

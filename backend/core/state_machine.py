@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Callable
 
@@ -71,7 +71,7 @@ class StateMachine:
     def __init__(self) -> None:
         self._state: SystemState = SystemState.IDLE
         self._lock = asyncio.Lock()
-        self._changed_at: datetime = datetime.utcnow()
+        self._changed_at: datetime = datetime.now(timezone.utc)
         self._listeners: list[Callable[[SystemState, SystemState], None]] = []
 
     @property
@@ -93,7 +93,7 @@ class StateMachine:
                 )
             old_state = self._state
             self._state = new_state
-            self._changed_at = datetime.utcnow()
+            self._changed_at = datetime.now(timezone.utc)
             logger.info("State transition: %s → %s", old_state, new_state)
             for cb in self._listeners:
                 try:

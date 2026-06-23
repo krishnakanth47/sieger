@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, require_module_read
 from backend.database.db import get_db
 from backend.database.models import Defect, InspectionResult, Shift
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 @router.get("/summary")
 async def get_summary(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("analytics")),
 ):
     """Global inspection summary (donut chart data)."""
     total = db.query(func.count(InspectionResult.id)).scalar() or 0
@@ -52,7 +52,7 @@ async def get_summary(
 async def get_hourly(
     date: str = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("analytics")),
 ):
     """
     24-hour yield distribution (line graph data).
@@ -105,7 +105,7 @@ async def get_hourly(
 @router.get("/shifts")
 async def get_shift_comparison(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("analytics")),
 ):
     """Shift comparison (bar chart data)."""
     shifts = db.query(Shift).all()
@@ -137,7 +137,7 @@ async def get_shift_comparison(
 async def get_defect_trends(
     days: int = 7,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("analytics")),
 ):
     """Day-by-day defect trend over N days."""
     cutoff = datetime.utcnow() - timedelta(days=days)
@@ -180,7 +180,7 @@ async def get_defect_trends(
 @router.get("/kpi-cards")
 async def get_kpi_cards(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("analytics")),
 ):
     """Dashboard KPI cards for the Analytics view."""
     total = db.query(func.count(InspectionResult.id)).scalar() or 0

@@ -62,12 +62,14 @@ export interface User {
   department: string | null;
   last_login: string | null;
   created_at: string | null;
+  services: string[];
 }
 
 export interface Role {
   id: number;
   name: string;
   description: string;
+  permissions?: Record<string, { read: boolean; write: boolean; delete: boolean }>;
 }
 
 export interface Permission {

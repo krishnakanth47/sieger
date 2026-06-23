@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, require_module_read
 from backend.core.state_machine import state_machine
 from backend.database.db import get_db
 from backend.database.models import ActivityLog, Pattern, ToleranceSettings
@@ -51,7 +51,7 @@ class ToleranceUpdateRequest(BaseModel):
 async def get_tolerance(
     pattern_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("teaching")),
 ):
     """Get current tolerance settings (global or pattern-specific)."""
     q = db.query(ToleranceSettings)
@@ -84,7 +84,7 @@ async def get_tolerance(
 async def update_tolerance(
     request: ToleranceUpdateRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("teaching")),
 ):
     _check_not_locked()
 
@@ -130,7 +130,7 @@ async def update_tolerance(
 @router.get("/patterns")
 async def get_patterns_for_teaching(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("teaching")),
 ):
     """List patterns eligible for teaching (image_count >= 10)."""
     from backend.routers.data_capture import MIN_IMAGES_REQUIRED

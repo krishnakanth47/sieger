@@ -5,12 +5,13 @@ Read-only paginated audit trail.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, require_module_read
 from backend.database.db import get_db
 from backend.database.models import ActivityLog
 
@@ -23,19 +24,28 @@ async def get_activity_log(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=200),
     user_id: Optional[int] = None,
+    username: Optional[str] = None,
     action_type: Optional[str] = None,
     module: Optional[str] = None,
+    from_date: Optional[datetime] = None,
+    to_date: Optional[datetime] = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("activity_log")),
 ):
     """Return paginated, filterable audit log."""
     q = db.query(ActivityLog)
     if user_id:
         q = q.filter(ActivityLog.user_id == user_id)
+    if username:
+        q = q.filter(ActivityLog.username.ilike(f"%{username}%"))
     if action_type:
         q = q.filter(ActivityLog.action_type == action_type.upper())
     if module:
         q = q.filter(ActivityLog.module == module)
+    if from_date:
+        q = q.filter(ActivityLog.timestamp >= from_date)
+    if to_date:
+        q = q.filter(ActivityLog.timestamp <= to_date)
 
     total = q.count()
     offset = (page - 1) * page_size
@@ -66,7 +76,7 @@ async def get_activity_log(
 @router.get("/action-types")
 async def get_action_types(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("activity_log")),
 ):
     """Return distinct action types for filter dropdowns."""
     from sqlalchemy import distinct
@@ -77,7 +87,7 @@ async def get_action_types(
 @router.get("/stats")
 async def get_log_stats(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_module_read("activity_log")),
 ):
     """Summary statistics for the activity log."""
     from sqlalchemy import func
