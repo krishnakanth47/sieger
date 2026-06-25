@@ -35,7 +35,7 @@ export function Header() {
       {/* Branding */}
       <div className="flex items-center gap-3 min-w-0">
         <div>
-          <p className="text-sm font-bold text-white leading-none tracking-wide">SIEGER</p>
+          <p className="text-sm font-bold text-[var(--color-text-primary)] leading-none tracking-wide">SIEGER</p>
           <p className="text-[9px] text-[var(--color-text-muted)] tracking-widest uppercase leading-none mt-0.5">
             partnering progress
           </p>

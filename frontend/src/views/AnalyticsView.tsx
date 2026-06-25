@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -8,7 +8,7 @@ import { analyticsApi } from '../api/client';
 
 const COLORS = { pass: '#22c55e', fail: '#ef4444', warn: '#f59e0b', uv: '#a855f7', blue: '#3b82f6' };
 
-function KPICard({ label, value, color = '#e8edf2', sub }: { label: string; value: string | number; color?: string; sub?: string }) {
+function KPICard({ label, value, color = '#1e293b', sub }: { label: string; value: string | number; color?: string; sub?: string }) {
   return (
     <div className="kpi-card">
       <span className="kpi-card__label">{label}</span>
@@ -25,13 +25,30 @@ export default function AnalyticsView() {
   const [trends, setTrends] = useState<any[]>([]);
   const [kpis, setKpis] = useState<any>(null);
 
-  useEffect(() => {
-    analyticsApi.summary().then(r => setSummary(r.data)).catch(() => { });
-    analyticsApi.hourly().then(r => setHourly(r.data)).catch(() => { });
-    analyticsApi.shifts().then(r => setShifts(r.data)).catch(() => { });
-    analyticsApi.defectTrends(3).then(r => setTrends(r.data)).catch(() => { });
-    analyticsApi.kpiCards().then(r => setKpis(r.data)).catch(() => { });
-  }, []);
+  const today = new Date().toISOString().slice(0, 10);
+  const [startDate, setStartDate] = useState(today);
+  const [endDate,   setEndDate]   = useState(today);
+  const [applied,   setApplied]   = useState({ start: today, end: today });
+
+  const fetchData = useCallback(() => {
+    analyticsApi.summary().then(r => setSummary(r.data)).catch(() => {});
+    analyticsApi.hourly().then(r => setHourly(r.data)).catch(() => {});
+    analyticsApi.shifts().then(r => setShifts(r.data)).catch(() => {});
+    analyticsApi.defectTrends(3).then(r => setTrends(r.data)).catch(() => {});
+    analyticsApi.kpiCards().then(r => setKpis(r.data)).catch(() => {});
+  }, [applied]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleApply = () => {
+    setApplied({ start: startDate, end: endDate });
+  };
+
+  const handleReset = () => {
+    setStartDate(today);
+    setEndDate(today);
+    setApplied({ start: today, end: today });
+  };
 
   const donutData = summary
     ? [
@@ -44,12 +61,111 @@ export default function AnalyticsView() {
     <div className="page">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>Production Analytics</h1>
-        <select className="input" style={{ width: 'auto', padding: '0.25rem 0.5rem', height: 'auto', fontSize: '0.75rem' }}>
-          <option>Today</option>
-          <option>Last 3 Days</option>
-          <option>Last 7 Days</option>
-          <option>This Month</option>
-        </select>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+
+          {/* ── START DATE ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+              color: 'var(--color-text-muted)', textTransform: 'uppercase',
+            }}>
+              Start Date
+            </label>
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              border: '1.5px solid var(--color-ips-border)',
+              borderRadius: 8, background: 'var(--color-ips-surface)',
+              padding: '0.375rem 0.625rem', gap: 8,
+              transition: 'border-color 0.15s',
+            }}>
+              <input
+                id="analytics-start-date"
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                style={{
+                  border: 'none', outline: 'none', background: 'transparent',
+                  fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 500,
+                  color: 'var(--color-text-primary)', cursor: 'pointer',
+                  letterSpacing: '0.04em', minWidth: 120,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── END DATE ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+              color: 'var(--color-text-muted)', textTransform: 'uppercase',
+            }}>
+              End Date
+            </label>
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              border: '1.5px solid var(--color-ips-border)',
+              borderRadius: 8, background: 'var(--color-ips-surface)',
+              padding: '0.375rem 0.625rem', gap: 8,
+              transition: 'border-color 0.15s',
+            }}>
+              <input
+                id="analytics-end-date"
+                type="date"
+                value={endDate}
+                min={startDate}
+                onChange={e => setEndDate(e.target.value)}
+                style={{
+                  border: 'none', outline: 'none', background: 'transparent',
+                  fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 500,
+                  color: 'var(--color-text-primary)', cursor: 'pointer',
+                  letterSpacing: '0.04em', minWidth: 120,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Action buttons ── */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              id="analytics-apply-btn"
+              onClick={handleApply}
+              style={{
+                background: 'var(--color-brand)', color: '#fff',
+                border: 'none', borderRadius: 7, padding: '0.42rem 1rem',
+                fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                letterSpacing: '0.04em', transition: 'opacity 0.15s',
+              }}
+            >
+              Apply
+            </button>
+            <button
+              id="analytics-reset-btn"
+              onClick={handleReset}
+              style={{
+                background: 'var(--color-ips-surface-2)',
+                color: 'var(--color-text-muted)',
+                border: '1px solid var(--color-ips-border)',
+                borderRadius: 7, padding: '0.42rem 0.75rem',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                transition: 'opacity 0.15s',
+              }}
+            >
+              Reset
+            </button>
+          </div>
+
+          {/* ── Applied range label ── */}
+          {applied.start !== applied.end ? (
+            <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+              {applied.start} → {applied.end}
+            </span>
+          ) : (
+            <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+              Showing: Today ({applied.start})
+            </span>
+          )}
+
+        </div>
       </div>
 
       {/* KPI strip */}
